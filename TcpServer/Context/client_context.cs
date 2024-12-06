@@ -1,0 +1,122 @@
+﻿using System.Buffers;
+using System.Net.Sockets;
+using System.Numerics;
+using System.Text;
+using System.Threading.Channels;
+using TcpServer.Common;
+
+namespace TcpServer.Context
+{
+    public class ClientContext
+    {
+        private readonly static int SendChannelCount = 1000;
+        private readonly TcpClient _client;
+        private readonly int _clientId;
+        private readonly NetworkStream _stream;
+        private readonly CancellationTokenSource _cts = new();
+        private readonly ServerContext _serverContext;
+
+        private readonly Channel<byte[]> _sendChannel = Channel.CreateBounded<byte[]>(SendChannelCount);
+
+        public ClientContext(TcpClient client, int clientId, ServerContext serverContext)
+        {
+            _client = client;
+            _client.NoDelay = true;
+            _clientId = clientId;
+            _stream = client.GetStream();
+            _serverContext = serverContext;
+
+            SendExecAsync();
+            ReadExecAsync();
+        }
+
+        private async void ReadExecAsync()
+        {
+            byte[] header = new byte[4];
+            int read_byte_count;
+            try
+            {
+                while (true)
+                {
+                    read_byte_count = 0;
+                    while (read_byte_count < header.Length)
+                    {
+                        int byteCount = await _stream.ReadAsync(header, read_byte_count, header.Length - read_byte_count, _cts.Token);
+                        if (byteCount <= 0)
+                        {
+                            throw new IOException("end of stream");
+                        }
+                        read_byte_count += byteCount;
+                    }
+                    int packet_size = BitConverter.ToInt32(header, 0);
+
+                    read_byte_count = 0;
+                    byte[] packet_buffer = ArrayPool<byte>.Shared.Rent(packet_size);
+
+                    while (read_byte_count < packet_size)
+                    {
+                        int byteCount = await _stream.ReadAsync(header, read_byte_count, packet_size - read_byte_count, _cts.Token);
+                        if (byteCount <= 0)
+                        {
+                            throw new IOException("end of stream");
+                        }
+                        read_byte_count += byteCount;
+                    }
+                    string message = Encoding.UTF8.GetString(packet_buffer);
+
+                    string response = $"Echo from server: {message}";
+                    byte[] responseBytes = Encoding.UTF8.GetBytes(response);
+                    SendPacket(responseBytes);
+                    ArrayPool<byte>.Shared.Return(packet_buffer);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                LogManager.Instance.Error($"Read Error: {ex.Message}");
+                Close();
+            }
+        }
+        
+        private async void SendExecAsync()
+        {
+            try
+            {
+                await foreach (var packet in _sendChannel.Reader.ReadAllAsync(_cts.Token))
+                {
+                    await _stream.WriteAsync(packet, _cts.Token);
+                    await _stream.FlushAsync(_cts.Token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                LogManager.Instance.Error($"Write Error: {ex.Message}");
+                Close();
+            }
+        }
+        public bool SendPacket(byte[] packet)
+        {
+            if (!_sendChannel.Writer.TryWrite(packet))
+            {
+                LogManager.Instance.Error("!_sendChannel.Writer.TryWrite(packet)");
+                Close();
+                return false;
+            }
+            return true;
+        }
+
+        public void Close()
+        {
+            _cts.Cancel();
+            //_writeChannel.Writer.Complete(); // 채널을 완료하여 작업 종료
+            _client.Close();
+            _serverContext.OnClientDisconnted(_clientId);
+        }
+    }
+}
