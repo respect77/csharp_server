@@ -23,6 +23,10 @@ namespace TcpServer.Common
         {
             var _logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
 
+            if (!Directory.Exists(_logDirectory))
+            {
+                Directory.CreateDirectory(_logDirectory);
+            }
             var now = DateTime.Now;
             var yearDirectory = Path.Combine(_logDirectory, now.ToString("yyyy"));
             var monthDirectory = Path.Combine(yearDirectory, now.ToString("MM"));

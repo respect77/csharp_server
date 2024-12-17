@@ -22,15 +22,6 @@ namespace TcpServer.Common
 
         public void Dispose(T obj)
         {
-            switch (obj)
-            {
-                case IDictionary dictionary:
-                    dictionary.Clear();
-                    break;
-                case IList list:
-                    list.Clear();
-                    break;
-            }
             pool.Return(obj);
         }
     }
@@ -55,7 +46,7 @@ namespace TcpServer.Common
         None,
         List,
         Dic,
-        HasSet,
+        HashSet,
         Object,
     }
 
@@ -63,8 +54,8 @@ namespace TcpServer.Common
     {
         private readonly static Lazy<ObjectPoolDisposeHelper> _instance = new(() => new ObjectPoolDisposeHelper());
 
-        private ConcurrentDictionary<string, CachedObjectPropertyGroupInfo> CachedObjectProperty = new();
-        private ConcurrentDictionary<string, CachedPropertyTypeEnum> CachedPropertyType = new();
+        private readonly ConcurrentDictionary<string, CachedObjectPropertyGroupInfo> CachedObjectProperty = new();
+        private readonly ConcurrentDictionary<string, CachedPropertyTypeEnum> CachedPropertyType = new();
         public static ObjectPoolDisposeHelper Instance => _instance.Value;
         private ObjectPoolDisposeHelper()
         {
@@ -196,7 +187,7 @@ namespace TcpServer.Common
                         property_type = CachedPropertyTypeEnum.Dic;
                         break;
                     case var _ when value != null && value.GetType().IsGenericType && value.GetType().GetGenericTypeDefinition() == typeof(HashSet<>):
-                        property_type = CachedPropertyTypeEnum.HasSet;
+                        property_type = CachedPropertyTypeEnum.HashSet;
                         break;
                     case var _ when value != null && value.GetType() != typeof(string) && !value.GetType().IsValueType:
                         property_type = CachedPropertyTypeEnum.Object;
@@ -233,7 +224,7 @@ namespace TcpServer.Common
                 case CachedPropertyTypeEnum.Dic:
                     DisposeDictionary(value, name);
                     break;
-                case CachedPropertyTypeEnum.HasSet:
+                case CachedPropertyTypeEnum.HashSet:
                     DisposeSet(value, name);
 
                     break;

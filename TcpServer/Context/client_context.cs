@@ -1,9 +1,11 @@
-﻿using System.Buffers;
+﻿using MemoryPack;
+using System.Buffers;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
 using System.Threading.Channels;
 using TcpServer.Common;
+using TcpServer.Common.Packet;
 
 namespace TcpServer.Context
 {
@@ -36,7 +38,7 @@ namespace TcpServer.Context
             int read_byte_count;
             try
             {
-                while (true)
+                while (!_cts.Token.IsCancellationRequested)
                 {
                     read_byte_count = 0;
                     while (read_byte_count < header.Length)
@@ -50,6 +52,13 @@ namespace TcpServer.Context
                     }
                     int packet_size = BitConverter.ToInt32(header, 0);
 
+                    if (packet_size <= 0)
+                    {
+                        //Error
+                        Close();
+                        return;
+                    }
+
                     read_byte_count = 0;
                     byte[] packet_buffer = ArrayPool<byte>.Shared.Rent(packet_size);
 
@@ -62,11 +71,16 @@ namespace TcpServer.Context
                         }
                         read_byte_count += byteCount;
                     }
+
+                    var basePacket = MemoryPackSerializer.Deserialize<BasePacket>(packet_buffer);
+                    /*
                     string message = Encoding.UTF8.GetString(packet_buffer);
 
                     string response = $"Echo from server: {message}";
                     byte[] responseBytes = Encoding.UTF8.GetBytes(response);
                     SendPacket(responseBytes);
+                    
+                    */
                     ArrayPool<byte>.Shared.Return(packet_buffer);
                 }
             }
@@ -87,7 +101,7 @@ namespace TcpServer.Context
                 await foreach (var packet in _sendChannel.Reader.ReadAllAsync(_cts.Token))
                 {
                     await _stream.WriteAsync(packet, _cts.Token);
-                    await _stream.FlushAsync(_cts.Token);
+                    //await _stream.FlushAsync(_cts.Token);
                 }
             }
             catch (OperationCanceledException)
