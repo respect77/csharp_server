@@ -31,17 +31,17 @@ namespace TcpServer.Common
         public static T Get<T>(T? _) where T : class, new() => CustomObjectPool<T>.Get();
     }
 
-    class CachedObjectPropertyGroupInfo
+    class CachedObjectMemberInfo
     {
-        public List<PropertyInfo> Lists { get; set; } = new();
-        public List<PropertyInfo> Dics { get; set; } = new();
-        public List<PropertyInfo> HashSets { get; set; } = new();
-        public List<PropertyInfo> Objects { get; set; } = new();
-        public CachedObjectPropertyGroupInfo()
+        public List<MemberInfo> Lists { get; set; } = new();
+        public List<MemberInfo> Dics { get; set; } = new();
+        public List<MemberInfo> HashSets { get; set; } = new();
+        public List<MemberInfo> Objects { get; set; } = new();
+        public CachedObjectMemberInfo()
         { }
     }
 
-    enum CachedPropertyTypeEnum
+    enum CachedMemberTypeEnum
     {
         None,
         List,
@@ -54,11 +54,46 @@ namespace TcpServer.Common
     {
         private readonly static Lazy<ObjectPoolDisposeHelper> _instance = new(() => new ObjectPoolDisposeHelper());
 
-        private readonly ConcurrentDictionary<string, CachedObjectPropertyGroupInfo> CachedObjectProperty = new();
-        private readonly ConcurrentDictionary<string, CachedPropertyTypeEnum> CachedPropertyType = new();
+        private ConcurrentDictionary<string, CachedObjectMemberInfo> CachedObjectMemberGroup = new();
         public static ObjectPoolDisposeHelper Instance => _instance.Value;
         private ObjectPoolDisposeHelper()
         {
+        }
+        CachedMemberTypeEnum GetType(Type type)
+        {
+            if (type.IsGenericType)
+            {
+                Type genericType = type.GetGenericTypeDefinition();
+
+                if (genericType == typeof(List<>))
+                {
+                    return CachedMemberTypeEnum.List;
+                }
+                else if (genericType == typeof(Dictionary<,>))
+                {
+                    return CachedMemberTypeEnum.Dic;
+                }
+                else if (genericType == typeof(HashSet<>))
+                {
+                    return CachedMemberTypeEnum.HashSet;
+                }
+                else
+                {
+                    LogManager.Instance.Debug($"Unhandled generic type: {genericType} {type.Name}");
+                    return CachedMemberTypeEnum.None;
+                }
+            }
+            else
+            {
+                if (type != typeof(string) && !type.IsValueType)
+                {
+                    return CachedMemberTypeEnum.Object;
+                }
+                else
+                {
+                    return CachedMemberTypeEnum.None;
+                }
+            }
         }
         public void DisposeClass<T>(T? obj, bool from_obj = false) where T : class, new()
         {
@@ -69,54 +104,74 @@ namespace TcpServer.Common
 
             Type type = obj.GetType();
 
-            if (!CachedObjectProperty.TryGetValue(type.Name, out var property_group))
+            if (!CachedObjectMemberGroup.TryGetValue(type.Name, out var member_group))
             {
-                property_group = new();
-                foreach (var property in type.GetProperties())
-                {
-                    var value = property.GetValue(obj);
+                member_group = new();
 
-                    switch (value)
+                var MemberAddExec = (MemberInfo member, Type member_type) =>
+                {
+                    var type = GetType(member_type);
+                    switch (type)
                     {
-                        case var _ when value is IList:
-                            property_group.Lists.Add(property);
+                        case CachedMemberTypeEnum.List:
+                            member_group.Lists.Add(member);
                             break;
-                        case var _ when value != null && value.GetType().IsGenericType && value.GetType().GetGenericTypeDefinition() == typeof(Dictionary<,>):
-                            property_group.Dics.Add(property);
+                        case CachedMemberTypeEnum.Dic:
+                            member_group.Dics.Add(member);
                             break;
-                        case var _ when value != null && value.GetType().IsGenericType && value.GetType().GetGenericTypeDefinition() == typeof(HashSet<>):
-                            property_group.HashSets.Add(property);
+                        case CachedMemberTypeEnum.HashSet:
+                            member_group.HashSets.Add(member);
                             break;
-                        case var _ when value != null && value.GetType() != typeof(string) && !value.GetType().IsValueType:
-                            property_group.Objects.Add(property);
-                            break;
-                        default:
-                            //LogManager.Instance.Debug($"{property.Name} Else");
+                        case CachedMemberTypeEnum.Object:
+                            member_group.Objects.Add(member);
                             break;
                     }
+                };
+
+                foreach (var field in type.GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance))
+                {
+                    if (field.Name.Contains("k__BackingField"))
+                    {
+                        continue;
+                    }
+                    MemberAddExec(field, field.FieldType);
                 }
-                CachedObjectProperty.TryAdd(type.Name, property_group);
+                foreach (var property in type.GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance))
+                {
+                    MemberAddExec(property, property.PropertyType);
+                }
+
+                CachedObjectMemberGroup.TryAdd(type.Name, member_group);
             }
 
-            foreach (var property in property_group.Lists)
+            var GetValue = (MemberInfo member) =>
             {
-                DisposeList(property.GetValue(obj), property.Name);
+                return member switch
+                {
+                    PropertyInfo property => property.GetValue(obj),
+                    FieldInfo field => field.GetValue(obj),
+                    _ => null,
+                };
+            };
+
+            foreach (var member in member_group.Lists)
+            {
+                DisposeList(GetValue(member), member.Name);
             }
 
-            foreach (var property in property_group.Dics)
+            foreach (var member in member_group.Dics)
             {
-                DisposeDictionary(property.GetValue(obj), property.Name);
+                DisposeDictionary(GetValue(member), member.Name);
             }
 
-            foreach (var property in property_group.HashSets)
+            foreach (var member in member_group.HashSets)
             {
-                DisposeSet(property.GetValue(obj), property.Name);
-
+                DisposeSet(GetValue(member), member.Name);
             }
 
-            foreach (var property in property_group.Objects)
+            foreach (var member in member_group.Objects)
             {
-                var value = property.GetValue(obj);
+                var value = GetValue(member);
                 DisposeClass(value);
             }
 
@@ -128,12 +183,16 @@ namespace TcpServer.Common
 
         private void DisposeList(object? value, string name)
         {
+            if (value == null)
+            {
+                return;
+            }
             if (value is IList list_value)
             {
-                CachedPropertyTypeEnum property_type = CachedPropertyTypeEnum.None;
+                var member_type = CachedMemberTypeEnum.None;
                 foreach (var list_v in list_value)
                 {
-                    if (!DisposeExec(list_v, name, ref property_type))
+                    if (!DisposeLoopExec(list_v, name, ref member_type))
                     {
                         break;
                     }
@@ -144,12 +203,16 @@ namespace TcpServer.Common
 
         private void DisposeDictionary(object? value, string name)
         {
+            if (value == null)
+            {
+                return;
+            }
             if (value is IDictionary dic_value)
             {
-                CachedPropertyTypeEnum property_type = CachedPropertyTypeEnum.None;
+                var property_type = CachedMemberTypeEnum.None;
                 foreach (var dic_v in dic_value.Values)
                 {
-                    if (!DisposeExec(dic_v, name, ref property_type))
+                    if (!DisposeLoopExec(dic_v, name, ref property_type))
                     {
                         break;
                     }
@@ -158,50 +221,24 @@ namespace TcpServer.Common
             }
         }
 
-        private void DisposeSet(dynamic? set_value, string name)
+        private void DisposeSet(dynamic? value, string name)
         {
-            if (set_value != null)
+            if (value == null)
             {
-                CachedPropertyTypeEnum property_type = CachedPropertyTypeEnum.None;
-                foreach (var set_v in set_value)
-                {
-                    if (!DisposeExec(set_v, name, ref property_type))
-                    {
-                        break;
-                    }
-                }
-                set_value.Clear();
+                return;
             }
+            var property_type = CachedMemberTypeEnum.None;
+            foreach (var set_v in value)
+            {
+                if (!DisposeLoopExec(set_v, name, ref property_type))
+                {
+                    break;
+                }
+            }
+            value.Clear();
         }
 
-        private CachedPropertyTypeEnum GetPropertyType(object? value, string name)
-        {
-            if (!CachedPropertyType.TryGetValue(name, out var property_type))
-            {
-                switch (value)
-                {
-                    case var _ when value is IList:
-                        property_type = CachedPropertyTypeEnum.List;
-                        break;
-                    case var _ when value != null && value.GetType().IsGenericType && value.GetType().GetGenericTypeDefinition() == typeof(Dictionary<,>):
-                        property_type = CachedPropertyTypeEnum.Dic;
-                        break;
-                    case var _ when value != null && value.GetType().IsGenericType && value.GetType().GetGenericTypeDefinition() == typeof(HashSet<>):
-                        property_type = CachedPropertyTypeEnum.HashSet;
-                        break;
-                    case var _ when value != null && value.GetType() != typeof(string) && !value.GetType().IsValueType:
-                        property_type = CachedPropertyTypeEnum.Object;
-                        break;
-                    default:
-                        property_type = CachedPropertyTypeEnum.None;
-                        break;
-                }
-                CachedPropertyType.TryAdd(name, property_type);
-            }
-            return property_type;
-        }
-
-        private bool DisposeExec(object? value, string from_name, ref CachedPropertyTypeEnum property_type)
+        private bool DisposeLoopExec(object? value, string from_name, ref CachedMemberTypeEnum member_type)
         {
             if (value == null)
             {
@@ -211,24 +248,24 @@ namespace TcpServer.Common
             Type type = value.GetType();
             string name = $"{from_name} {type.Name}";
 
-            if (property_type == CachedPropertyTypeEnum.None)
+            if (member_type == CachedMemberTypeEnum.None)
             {
-                property_type = GetPropertyType(value, name);
+                //member_type = GetPropertyType(value, name);
+                member_type = GetType(type);
             }
 
-            switch (property_type)
+            switch (member_type)
             {
-                case CachedPropertyTypeEnum.List:
+                case CachedMemberTypeEnum.List:
                     DisposeList(value, name);
                     break;
-                case CachedPropertyTypeEnum.Dic:
+                case CachedMemberTypeEnum.Dic:
                     DisposeDictionary(value, name);
                     break;
-                case CachedPropertyTypeEnum.HashSet:
+                case CachedMemberTypeEnum.HashSet:
                     DisposeSet(value, name);
-
                     break;
-                case CachedPropertyTypeEnum.Object:
+                case CachedMemberTypeEnum.Object:
                     DisposeClass(value);
                     break;
                 default:
