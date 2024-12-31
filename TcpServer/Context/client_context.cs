@@ -20,6 +20,7 @@ namespace TcpServer.Context
 
         private readonly Channel<byte[]> _sendChannel = Channel.CreateBounded<byte[]>(SendChannelCount);
 
+        //public ClientContext() { }
         public ClientContext(TcpClient client, int clientId, ServerContext serverContext)
         {
             _client = client;
@@ -73,15 +74,13 @@ namespace TcpServer.Context
                     }
 
                     var basePacket = MemoryPackSerializer.Deserialize<BasePacket>(packet_buffer);
-                    /*
-                    string message = Encoding.UTF8.GetString(packet_buffer);
-
-                    string response = $"Echo from server: {message}";
-                    byte[] responseBytes = Encoding.UTF8.GetBytes(response);
-                    SendPacket(responseBytes);
-                    
-                    */
-                    ArrayPool<byte>.Shared.Return(packet_buffer);
+                    if (basePacket == null)
+                    {
+                        ArrayPool<byte>.Shared.Return(packet_buffer);
+                        continue;
+                    }
+                    _serverContext.RecvPacket(this, basePacket.Type, packet_buffer);
+                    //ArrayPool<byte>.Shared.Return(packet_buffer);
                 }
             }
             catch (OperationCanceledException)
@@ -114,9 +113,9 @@ namespace TcpServer.Context
                 Close();
             }
         }
-        public bool SendPacket(byte[] packet)
+        public bool SendPacket<T>(T packet) where T: BasePacket
         {
-            if (!_sendChannel.Writer.TryWrite(packet))
+            if (!_sendChannel.Writer.TryWrite(MemoryPackSerializer.Serialize(packet)))
             {
                 LogManager.Instance.Error("!_sendChannel.Writer.TryWrite(packet)");
                 Close();

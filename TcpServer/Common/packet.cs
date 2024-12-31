@@ -8,6 +8,12 @@ namespace TcpServer.Common.Packet
         LoginServer,
     }
 
+    public enum ResultType
+    {
+        Success,
+        Error1,
+    }
+
     [MemoryPackable]
     public partial class BasePacket
     {
@@ -15,6 +21,16 @@ namespace TcpServer.Common.Packet
         public BasePacket(PacketType type)
         {
             Type = type;
+        }
+    }
+
+    [MemoryPackable]
+    public partial class ReaponseBasePacket: BasePacket
+    {
+        public ResultType Result { get; set; }
+        public ReaponseBasePacket(PacketType type, ResultType result) : base(type)
+        {
+            Result = result;
         }
     }
     [MemoryPackable]
@@ -28,10 +44,9 @@ namespace TcpServer.Common.Packet
     }
 
     [MemoryPackable]
-    public partial class LoginServerPacket : BasePacket
+    public partial class LoginServerPacket : ReaponseBasePacket
     {
-        public int Result { get; set; }
-        public LoginServerPacket() : base(PacketType.LoginServer)
+        public LoginServerPacket(ResultType result = ResultType.Success) : base(PacketType.LoginServer, result)
         {
         }
     }
