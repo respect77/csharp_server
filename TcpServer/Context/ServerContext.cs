@@ -29,7 +29,7 @@ namespace TcpServer.Context
 
         // 연결된 클라이언트들을 저장할 ConcurrentDictionary
         private readonly ConcurrentDictionary<int, ClientContext> _clients = new();
-        private readonly Channel<(ClientContext, PacketType, byte[] packet_buffer)> _requestChannel = Channel.CreateUnbounded<(ClientContext, PacketType, byte[])>();
+        private readonly Channel<(ClientContext, PacketType, BasePacket base_packet)> _requestChannel = Channel.CreateUnbounded<(ClientContext, PacketType, BasePacket)>();
         private readonly Procedure _procedure;
         private readonly LogManager logManager = LogManager.Instance;
         public ServerContext(IOptions<ServerSettings> setting)
@@ -63,9 +63,9 @@ namespace TcpServer.Context
             }
         }
 
-        public void RecvPacket(ClientContext client_context, PacketType type, byte[] packet_buffer)
+        public void RecvPacket(ClientContext client_context, PacketType type, BasePacket base_packet)
         {
-            _requestChannel.Writer.TryWrite((client_context, type, packet_buffer));
+            _requestChannel.Writer.TryWrite((client_context, type, base_packet));
         }
         
         public void SendPacket<T>(ClientContext client_context, T packet) where T: BasePacket
@@ -88,17 +88,25 @@ namespace TcpServer.Context
         }
         private async void ScheduleExec(CancellationToken cancellationToken)
         {
-            /*
-            var p = new LoginClientPacket();
-            p.UserId = 1234;
-            _procedure.Exec(new ClientContext(), p.Type, MemoryPackSerializer.Serialize(p));
-            */
+
+            var sendPacket = new LoginClientPacket();
+            sendPacket.UserId = 1234;
+            var buffer = MemoryPackSerializer.Serialize((BasePacket)sendPacket);
+
+            var basePacket = MemoryPackSerializer.Deserialize<BasePacket>(buffer);
+            if (basePacket == null)
+            {
+                return;
+            }
+            var loginp = basePacket as LoginClientPacket;
+
+            //_procedure.Exec(new ClientContext(), p.Type, MemoryPackSerializer.Serialize(p));
+            
             try
             {
-                await foreach (var (client_context, type, packet_buffer) in _requestChannel.Reader.ReadAllAsync(cancellationToken))
+                await foreach (var (client_context, type, base_packet) in _requestChannel.Reader.ReadAllAsync(cancellationToken))
                 {
-                    _procedure.Exec(client_context, type, packet_buffer);
-                    ArrayPool<byte>.Shared.Return(packet_buffer);
+                    _procedure.Exec(client_context, type, base_packet);
                 }
             }
             catch (OperationCanceledException)

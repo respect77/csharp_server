@@ -8,7 +8,6 @@ namespace TcpServer.Common
     public class CustomObjectPool<T> where T : class, new()
     {
         private readonly static Lazy<CustomObjectPool<T>> _instance = new(() => new CustomObjectPool<T>());
-
         private readonly DefaultObjectPoolProvider provider = new();
         private readonly ObjectPool<T> pool;
 

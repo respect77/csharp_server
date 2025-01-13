@@ -8,7 +8,7 @@ namespace TcpServer.Procedures
     public partial class Procedure
     {
         private readonly ServerContext ServerContext;
-        public delegate void ProcedureExecDelegate(ClientContext clientContext, byte[] packet_buffer);
+        public delegate void ProcedureExecDelegate(ClientContext clientContext, BasePacket base_packet);
 
         private readonly Dictionary<PacketType, ProcedureExecDelegate> _prodcedure = new();
         private readonly LogManager _logManager = LogManager.Instance;
@@ -28,11 +28,11 @@ namespace TcpServer.Procedures
             }
         }
 
-        public void Exec(ClientContext client_context, PacketType type, byte[] packet_buffer)
+        public void Exec(ClientContext client_context, PacketType type, BasePacket base_packet)
         {
             if (_prodcedure.TryGetValue(type, out var func))
             {
-                func(client_context, packet_buffer);
+                func(client_context, base_packet);
             }
             else
             {

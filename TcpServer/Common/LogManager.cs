@@ -19,6 +19,7 @@ namespace TcpServer.Common
         private readonly Channel<string> _logMessageChannel = Channel.CreateUnbounded<string>();
         private readonly CancellationTokenSource _cts = new();
         public static LogManager Instance => _instance.Value;
+
         private LogManager()
         {
             var _logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");

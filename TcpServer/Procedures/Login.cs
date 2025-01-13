@@ -1,5 +1,4 @@
-﻿using MemoryPack;
-using TcpServer.Common.Packet;
+﻿using TcpServer.Common.Packet;
 using TcpServer.Context;
 
 namespace TcpServer.Procedures
@@ -7,10 +6,9 @@ namespace TcpServer.Procedures
     public partial class Procedure
     {
         [Procedure(PacketType.LoginClient)]
-        public void Login(ClientContext clientContext, byte[] packet_buffer)
+        public void Login(ClientContext clientContext, BasePacket base_packet)
         {
-            var loginPacket = MemoryPackSerializer.Deserialize<LoginClientPacket>(packet_buffer);
-            if (loginPacket == null)
+            if (base_packet is not LoginClientPacket loginPacket)
             {
                 return;
             }
