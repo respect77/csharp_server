@@ -13,11 +13,11 @@ using TcpServer.Procedures;
 namespace TcpServer.Context
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-    public class PacketExecAttribute : Attribute
+    public class ProcedureAttribute : Attribute
     {
         public PacketType PacketType { get; }
 
-        public PacketExecAttribute(PacketType packetType)
+        public ProcedureAttribute(PacketType packetType)
         {
             PacketType = packetType;
         }
@@ -49,7 +49,7 @@ namespace TcpServer.Context
 
             while (_isRunning)
             {
-                var client = await _listener.AcceptTcpClientAsync();
+                var client = await _listener.AcceptTcpClientAsync(cancellationToken);
                 if (!_clients.TryAdd(clientId, new(client, clientId, this)))
                 {
                     logManager.Error($"Client {clientId} Exsited");
@@ -95,9 +95,8 @@ namespace TcpServer.Context
             */
             try
             {
-                await foreach (var request in _requestChannel.Reader.ReadAllAsync(cancellationToken))
+                await foreach (var (client_context, type, packet_buffer) in _requestChannel.Reader.ReadAllAsync(cancellationToken))
                 {
-                    var (client_context, type, packet_buffer) = request;
                     _procedure.Exec(client_context, type, packet_buffer);
                     ArrayPool<byte>.Shared.Return(packet_buffer);
                 }

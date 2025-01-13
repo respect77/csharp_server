@@ -18,7 +18,7 @@ namespace TcpServer.Procedures
 
             foreach (var method in GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
-                var attr = method.GetCustomAttribute<PacketExecAttribute>();
+                var attr = method.GetCustomAttribute<ProcedureAttribute>();
                 if (attr == null)
                 {
                     continue;
@@ -33,6 +33,10 @@ namespace TcpServer.Procedures
             if (_prodcedure.TryGetValue(type, out var func))
             {
                 func(client_context, packet_buffer);
+            }
+            else
+            {
+                _logManager.Error($"_prodcedure.TryGetValue(type, out var func): {type}");
             }
         }
     }

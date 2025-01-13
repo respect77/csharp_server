@@ -6,7 +6,7 @@ namespace TcpServer.Procedures
 {
     public partial class Procedure
     {
-        [PacketExec(PacketType.LoginClient)]
+        [Procedure(PacketType.LoginClient)]
         public void Login(ClientContext clientContext, byte[] packet_buffer)
         {
             var loginPacket = MemoryPackSerializer.Deserialize<LoginClientPacket>(packet_buffer);
