@@ -79,7 +79,6 @@ namespace TcpServer.Context
                         ArrayPool<byte>.Shared.Return(packet_buffer);
                         continue;
                     }
-                    var loginp = basePacket as LoginClientPacket;
                     _serverContext.RecvPacket(this, basePacket.Type, basePacket);
                     ArrayPool<byte>.Shared.Return(packet_buffer);
                 }

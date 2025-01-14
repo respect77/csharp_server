@@ -40,6 +40,11 @@ namespace TcpServer.Context
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            /*
+            var sendPacket = new LoginClientPacket();
+            _procedure.Exec(new ClientContext(), sendPacket.Type, sendPacket);
+            */
+
             _isRunning = true;
             _listener.Start();
             ScheduleExec(cancellationToken);
@@ -88,20 +93,6 @@ namespace TcpServer.Context
         }
         private async void ScheduleExec(CancellationToken cancellationToken)
         {
-
-            var sendPacket = new LoginClientPacket();
-            sendPacket.UserId = 1234;
-            var buffer = MemoryPackSerializer.Serialize((BasePacket)sendPacket);
-
-            var basePacket = MemoryPackSerializer.Deserialize<BasePacket>(buffer);
-            if (basePacket == null)
-            {
-                return;
-            }
-            var loginp = basePacket as LoginClientPacket;
-
-            //_procedure.Exec(new ClientContext(), p.Type, MemoryPackSerializer.Serialize(p));
-            
             try
             {
                 await foreach (var (client_context, type, base_packet) in _requestChannel.Reader.ReadAllAsync(cancellationToken))
