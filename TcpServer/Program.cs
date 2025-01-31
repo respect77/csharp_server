@@ -1,4 +1,4 @@
-
+ï»¿
 using TcpServer.Context;
 
 namespace TcpServer
@@ -20,7 +20,7 @@ namespace TcpServer
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
                     config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-                    // È¯°æº° ¼³Á¤ÀÌ ÇÊ¿äÇÑ °æ¿ì
+                    // í™˜ê²½ë³„ ì„¤ì •ì´ í•„ìš”í•œ ê²½ìš°
                     var env = hostingContext.HostingEnvironment;
                     config.AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true);
                 })

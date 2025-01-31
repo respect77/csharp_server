@@ -1,5 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -18,7 +19,7 @@ namespace WebServer
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
                     config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-                    // È¯°æº° ¼³Á¤ÀÌ ÇÊ¿äÇÑ °æ¿ì
+                    // í™˜ê²½ë³„ ì„¤ì •ì´ í•„ìš”í•œ ê²½ìš°
                     var env = hostingContext.HostingEnvironment;
                     config.AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: true);
                 })
@@ -38,25 +39,37 @@ namespace WebServer
         }
         public void ConfigureServices(IServiceCollection services)
         {
-            //services.AddSingleton<CustomWebSocketHandler>(); ÀÌ·±½ÄÀ¸·Î WebSocketHandler¸¦ µî·Ï
+            //services.AddSingleton<CustomWebSocketHandler>(); ì´ëŸ°ì‹ìœ¼ë¡œ WebSocketHandlerë¥¼ ë“±ë¡
 
-            //ASP.NET CoreÀÇ ÀÇÁ¸¼º ÁÖÀÔ(DI) ÄÁÅ×ÀÌ³Ê¿¡ MVC ÄÁÆ®·Ñ·¯¿Í °ü·ÃµÈ ¼­ºñ½º¸¦ µî·ÏÇÕ´Ï´Ù. ÀÌ È£ÃâÀº ÄÁÆ®·Ñ·¯ ±â¹İ ¾ÖÇÃ¸®ÄÉÀÌ¼ÇÀ» ¼³Á¤ÇÏ°í ½ÇÇàÇÏ±â À§ÇØ ÇÊ¼öÀû
+            //ASP.NET Coreì˜ ì˜ì¡´ì„± ì£¼ì…(DI) ì»¨í…Œì´ë„ˆì— MVC ì»¨íŠ¸ë¡¤ëŸ¬ì™€ ê´€ë ¨ëœ ì„œë¹„ìŠ¤ë¥¼ ë“±ë¡í•©ë‹ˆë‹¤. ì´ í˜¸ì¶œì€ ì»¨íŠ¸ë¡¤ëŸ¬ ê¸°ë°˜ ì• í”Œë¦¬ì¼€ì´ì…˜ì„ ì„¤ì •í•˜ê³  ì‹¤í–‰í•˜ê¸° ìœ„í•´ í•„ìˆ˜ì 
             services.AddControllers();
 
-            // MySettingsÀ» ±¸¼º ¼½¼ÇÀ¸·ÎºÎÅÍ ¹ÙÀÎµùÇÏ¿© ÁÖÀÔÇÒ ¼ö ÀÖ°Ô ¼³Á¤ÇÕ´Ï´Ù.
+            // MySettingsì„ êµ¬ì„± ì„¹ì…˜ìœ¼ë¡œë¶€í„° ë°”ì¸ë”©í•˜ì—¬ ì£¼ì…í•  ìˆ˜ ìˆê²Œ ì„¤ì •í•©ë‹ˆë‹¤.
             services.Configure<MySettings>(Configuration.GetSection("MySettings"));
 
-            // MyService¸¦ ¼­ºñ½º·Î Ãß°¡
-            services.AddSingleton<MyService>(); // Transient, Scoped, Singleton Áß »óÈ²¿¡ ¸Â´Â ¶óÀÌÇÁ»çÀÌÅ¬À» ¼±ÅÃ
+            // MyServiceë¥¼ ì„œë¹„ìŠ¤ë¡œ ì¶”ê°€
+            services.AddSingleton<MyService>(); // Transient, Scoped, Singleton ì¤‘ ìƒí™©ì— ë§ëŠ” ë¼ì´í”„ì‚¬ì´í´ì„ ì„ íƒ
 
-            // ±âÅ¸ ÇÊ¿äÇÑ ¼­ºñ½º Ãß°¡
+            // ê¸°íƒ€ í•„ìš”í•œ ì„œë¹„ìŠ¤ ì¶”ê°€
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            // ¾Û ¹Ìµé¿ş¾î ¼³Á¤
+            // ì•± ë¯¸ë“¤ì›¨ì–´ ì„¤ì •
             if (env.IsDevelopment())
             {
+                app.UseSwagger(options =>
+                {
+                    //options.SerializeAsV2 = true;
+                });
+                app.UseSwaggerUI(options => // UseSwaggerUI is called only in Development.
+                {
+                    options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+                    options.RoutePrefix = string.Empty;
+                });
+
                 app.UseDeveloperExceptionPage();
             }
 
@@ -67,8 +80,8 @@ namespace WebServer
 
     public class MySettings
     {
-        public string SettingA { get; set; }
-        public string SettingB { get; set; }
+        public string? SettingA { get; set; }
+        public string? SettingB { get; set; }
     }
 
     public class MyService
@@ -83,16 +96,16 @@ namespace WebServer
             Console.WriteLine($"SettingA: {_settings.Value.SettingA}");
         }
     }
+
     [ApiController]
-    [Route("api/[controller]")]
-    public class RoomController : ControllerBase
+    [Route("[controller]")]
+    public partial class RoomController : ControllerBase
     {
         public RoomController(MyService myService, IOptions<MySettings> settings)
         {
-            var asdf = 1;
         }
 
-        // ÄÁÆ®·Ñ·¯ ¾×¼Ç ¸Ş¼­µå ÀÛ¼º
+        // ì»¨íŠ¸ë¡¤ëŸ¬ ì•¡ì…˜ ë©”ì„œë“œ ì‘ì„±
         [HttpGet("test")]
         public IActionResult CreateGameSession()
         {
@@ -100,6 +113,32 @@ namespace WebServer
             return StatusCode(200, new { error = "Internal server error" });
         }
     }
+
+
+    public partial class RoomController : ControllerBase
+    {
+        public class Args
+        {
+            public int P1 { get; set; }
+            public int P2 { get; set; }
+        }
+
+        [HttpGet("get_{id}")]
+        public IActionResult CreateGameSession([FromRoute] string id, [FromQuery] Args args)
+        {
+            //http://localhost:5000/room/get_{id}?P1=1&P2=4
+            return StatusCode(200, new { error = "Internal server error" });
+        }
+
+        [HttpPost("set_{id}")]
+        public IActionResult CreateGameSession([FromRoute] string id, [FromBody] int name)
+        {
+            //http://localhost:5000/room/set_{id}
+            return StatusCode(200, new { error = "Internal server error" });
+        }
+    }
+
+    
 }
 
 
