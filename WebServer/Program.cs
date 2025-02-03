@@ -1,9 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Models;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
 
 namespace WebServer
 {
