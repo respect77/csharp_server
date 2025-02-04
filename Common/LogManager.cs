@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Threading.Channels;
 
-namespace TcpServer.Common
+namespace Common
 {
     public class LogManager
     {

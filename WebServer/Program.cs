@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-
+using Common;
 namespace WebServer
 {
     class Program
@@ -47,7 +47,7 @@ namespace WebServer
             services.AddSingleton<MyService>(); // Transient, Scoped, Singleton 중 상황에 맞는 라이프사이클을 선택
 
             // 기타 필요한 서비스 추가
-            services.AddEndpointsApiExplorer();
+            //services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
         }
 
@@ -120,8 +120,10 @@ namespace WebServer
         }
 
         [HttpGet("get_{id}")]
-        public IActionResult CreateGameSession([FromRoute] string id, [FromQuery] Args args)
+        public async Task<IActionResult> CreateGameSession([FromRoute] string id, [FromQuery] Args args)
         {
+            var dba = new DBAgent();
+            await dba.Query<string>("show tables;");
             //http://localhost:5000/room/get_{id}?P1=1&P2=4
             return StatusCode(200, new { error = "Internal server error" });
         }

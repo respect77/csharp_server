@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="MemoryPack" Version="1.21.3" />
+	  <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
 
 </Project>

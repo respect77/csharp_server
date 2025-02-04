@@ -6,6 +6,11 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TcpServer", "TcpServer\TcpServer.csproj", "{CD46B921-8141-4BCC-BCEA-4FF6691D6B5C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebServer", "WebServer\WebServer.csproj", "{A8CFD788-2CDC-4EF0-A9FA-F8BDFE396E10}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FF4E790F-3020-4920-BFE7-64A6E4EBB31E} = {FF4E790F-3020-4920-BFE7-64A6E4EBB31E}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{FF4E790F-3020-4920-BFE7-64A6E4EBB31E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +26,10 @@ Global
 		{A8CFD788-2CDC-4EF0-A9FA-F8BDFE396E10}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A8CFD788-2CDC-4EF0-A9FA-F8BDFE396E10}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A8CFD788-2CDC-4EF0-A9FA-F8BDFE396E10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF4E790F-3020-4920-BFE7-64A6E4EBB31E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF4E790F-3020-4920-BFE7-64A6E4EBB31E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF4E790F-3020-4920-BFE7-64A6E4EBB31E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF4E790F-3020-4920-BFE7-64A6E4EBB31E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

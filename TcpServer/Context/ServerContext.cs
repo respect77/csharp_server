@@ -1,4 +1,5 @@
-﻿using MemoryPack;
+﻿using Common;
+using MemoryPack;
 using Microsoft.Extensions.Options;
 using System.Buffers;
 using System.Collections.Concurrent;
@@ -6,7 +7,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Channels;
-using TcpServer.Common;
 using TcpServer.Common.Packet;
 using TcpServer.Procedures;
 
