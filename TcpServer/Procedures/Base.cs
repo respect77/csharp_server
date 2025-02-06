@@ -7,13 +7,13 @@ namespace TcpServer.Procedures
 {
     public partial class Procedure
     {
-        private readonly ServerContext ServerContext;
+        private readonly ServerContext _serverContext;
         public delegate void ProcedureExecDelegate<T>(ClientContext clientContext, T packet) where T: BasePacket;
         private readonly Dictionary<PacketType, Action<ClientContext, BasePacket>> _prodcedure = new();
         private readonly LogManager _logManager = LogManager.Instance;
         public Procedure(ServerContext serverContext)
         {
-            ServerContext = serverContext;
+            _serverContext = serverContext;
 
             MethodInfo RegistMethod = typeof(Procedure).GetMethod("RegistProcedure") ?? throw new Exception("RegistProcedure Not Exists");
 

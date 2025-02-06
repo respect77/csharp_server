@@ -122,7 +122,7 @@ namespace WebServer
         [HttpGet("get_{id}")]
         public async Task<IActionResult> CreateGameSession([FromRoute] string id, [FromQuery] Args args)
         {
-            var dba = new DBAgent();
+            var dba = new MySqlModule("Server=localhost;Database=mysql;User=root;Password=1234;Pooling=true;Min Pool Size=5;Max Pool Size=100;");
             await dba.Query<string>("show tables;");
             //http://localhost:5000/room/get_{id}?P1=1&P2=4
             return StatusCode(200, new { error = "Internal server error" });

@@ -15,7 +15,7 @@ namespace TcpServer.Context
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class ProcedureAttribute : Attribute
     {
-        public PacketType PacketType { get; }
+        public readonly PacketType PacketType;
 
         public ProcedureAttribute(PacketType packetType)
         {
@@ -31,7 +31,7 @@ namespace TcpServer.Context
         private readonly ConcurrentDictionary<int, ClientContext> _clients = new();
         private readonly Channel<(ClientContext, PacketType, BasePacket base_packet)> _requestChannel = Channel.CreateUnbounded<(ClientContext, PacketType, BasePacket)>();
         private readonly Procedure _procedure;
-        private readonly LogManager logManager = LogManager.Instance;
+        private readonly LogManager _logManager = LogManager.Instance;
         public ServerContext(IOptions<ServerSettings> setting)
         {
             _listener = new TcpListener(IPAddress.Parse(setting.Value.IpAddress), setting.Value.Port);
@@ -48,7 +48,7 @@ namespace TcpServer.Context
             _isRunning = true;
             _listener.Start();
             ScheduleExec(cancellationToken);
-            logManager.Info("Server started...");
+            _logManager.Info("Server started...");
 
             int clientId = 1;
 
@@ -57,11 +57,11 @@ namespace TcpServer.Context
                 var client = await _listener.AcceptTcpClientAsync(cancellationToken);
                 if (!_clients.TryAdd(clientId, new(client, clientId, this)))
                 {
-                    logManager.Error($"Client {clientId} Exsited");
+                    _logManager.Error($"Client {clientId} Exsited");
                 }
                 else
                 {
-                    logManager.Info($"Client {clientId} connected.");
+                    _logManager.Info($"Client {clientId} connected.");
                 }
                 
                 clientId++;
@@ -88,7 +88,7 @@ namespace TcpServer.Context
                 client.Close();
             }
             _clients.Clear();
-            logManager.Info("Server Stopped.");
+            _logManager.Info("Server Stopped.");
             return Task.CompletedTask;
         }
         private async void ScheduleExec(CancellationToken cancellationToken)
@@ -107,7 +107,7 @@ namespace TcpServer.Context
             }
             catch (Exception ex)
             {
-                logManager.Error($"ScheduleExec() Error {ex.Message}");
+                _logManager.Error($"ScheduleExec() Error {ex.Message}");
             }
             finally
             {
@@ -117,7 +117,7 @@ namespace TcpServer.Context
         {
             if (_clients.TryRemove(clientId, out _))
             {
-                logManager.Info($"Client {clientId} Disconnected.");
+                _logManager.Info($"Client {clientId} Disconnected.");
             }
         }
     }

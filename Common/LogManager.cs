@@ -22,18 +22,18 @@ namespace Common
 
         private LogManager()
         {
-            var _logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+            var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
 
-            if (!Directory.Exists(_logDirectory))
+            if (!Directory.Exists(logDirectory))
             {
-                Directory.CreateDirectory(_logDirectory);
+                Directory.CreateDirectory(logDirectory);
             }
             var now = DateTime.Now;
-            var yearDirectory = Path.Combine(_logDirectory, now.ToString("yyyy"));
+            var yearDirectory = Path.Combine(logDirectory, now.ToString("yyyy"));
             var monthDirectory = Path.Combine(yearDirectory, now.ToString("MM"));
 
             // File name with year-month-day-hour.minute.second.millisecond.log
-            var _logFilePath = Path.Combine(monthDirectory, now.ToString("yyyy-MM-dd-HH.mm.ss.fff") + ".log");
+            var logFilePath = Path.Combine(monthDirectory, now.ToString("yyyy-MM-dd-HH.mm.ss.fff") + ".log");
 
             // Create directories if they do not exist
             if (!Directory.Exists(yearDirectory))
@@ -45,7 +45,7 @@ namespace Common
                 Directory.CreateDirectory(monthDirectory);
             }
 
-            _writer = new StreamWriter(_logFilePath, append: true) { AutoFlush = true };
+            _writer = new StreamWriter(logFilePath, append: true) { AutoFlush = true };
             Schedule(_cts.Token);
         }
 
@@ -95,7 +95,6 @@ namespace Common
 
         private void LogExec(LogLevel level, string userId, string message)
         {
-
             if (userId != "")
             {
                 userId = $"[{userId}]";

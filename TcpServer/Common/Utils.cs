@@ -9,20 +9,20 @@ namespace TcpServer.Common
     public class CustomObjectPool<T> where T : class, new()
     {
         private readonly static Lazy<CustomObjectPool<T>> _instance = new(() => new CustomObjectPool<T>());
-        private readonly DefaultObjectPoolProvider provider = new();
-        private readonly ObjectPool<T> pool;
+        private readonly DefaultObjectPoolProvider _provider = new();
+        private readonly ObjectPool<T> _pool;
 
         private CustomObjectPool()
         {
-            pool = provider.Create<T>();
+            _pool = _provider.Create<T>();
         }
         public static CustomObjectPool<T> Instance => _instance.Value;
 
-        public static T Get() => Instance.pool.Get();
+        public static T Get() => Instance._pool.Get();
 
         public void Dispose(T obj)
         {
-            pool.Return(obj);
+            _pool.Return(obj);
         }
     }
     public static class CustomObjectPool
@@ -54,7 +54,7 @@ namespace TcpServer.Common
     {
         private readonly static Lazy<ObjectPoolDisposeHelper> _instance = new(() => new ObjectPoolDisposeHelper());
 
-        private ConcurrentDictionary<string, CachedObjectMemberInfo> CachedObjectMemberGroup = new();
+        private ConcurrentDictionary<string, CachedObjectMemberInfo> _cachedObjectMemberGroup = new();
         public static ObjectPoolDisposeHelper Instance => _instance.Value;
         private ObjectPoolDisposeHelper()
         {
@@ -104,7 +104,7 @@ namespace TcpServer.Common
 
             Type type = obj.GetType();
 
-            if (!CachedObjectMemberGroup.TryGetValue(type.Name, out var member_group))
+            if (!_cachedObjectMemberGroup.TryGetValue(type.Name, out var member_group))
             {
                 member_group = new();
 
@@ -141,7 +141,7 @@ namespace TcpServer.Common
                     MemberAddExec(property, property.PropertyType);
                 }
 
-                CachedObjectMemberGroup.TryAdd(type.Name, member_group);
+                _cachedObjectMemberGroup.TryAdd(type.Name, member_group);
             }
 
             var GetValue = (MemberInfo member) =>
