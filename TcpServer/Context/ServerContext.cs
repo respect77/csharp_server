@@ -95,7 +95,7 @@ namespace TcpServer.Context
         {
             try
             {
-                await foreach (var (client_context, type, base_packet) in _requestChannel.Reader.ReadAllAsync(cancellationToken))
+                await foreach (var (client_context, type, base_packet) in _requestChannel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
                 {
                     _procedure.Exec(client_context, type, base_packet);
                 }

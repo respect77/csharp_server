@@ -41,10 +41,10 @@ namespace WebServer
             services.AddControllers();
 
             // MySettings을 구성 섹션으로부터 바인딩하여 주입할 수 있게 설정합니다.
-            services.Configure<MySettings>(Configuration.GetSection("MySettings"));
+            services.Configure<MySqlSettings>(Configuration.GetSection("MySqlSettings"));
 
             // MyService를 서비스로 추가
-            services.AddSingleton<MyService>(); // Transient, Scoped, Singleton 중 상황에 맞는 라이프사이클을 선택
+            //services.AddSingleton<MyService>(); // Transient, Scoped, Singleton 중 상황에 맞는 라이프사이클을 선택
 
             // 기타 필요한 서비스 추가
             //services.AddEndpointsApiExplorer();
@@ -74,16 +74,17 @@ namespace WebServer
         }
     }
 
-    public class MySettings
+    public class MySqlSettings
     {
+        public string? ConnectString {  get; set; }
         public string? SettingA { get; set; }
         public string? SettingB { get; set; }
     }
 
     public class MyService
     {
-        private readonly IOptions<MySettings> _settings;
-        public MyService(IOptions<MySettings> settings)
+        private readonly IOptions<MySqlSettings> _settings;
+        public MyService(IOptions<MySqlSettings> settings)
         {
             _settings = settings;
         }
@@ -97,8 +98,11 @@ namespace WebServer
     [Route("[controller]")]
     public partial class RoomController : ControllerBase
     {
-        public RoomController(MyService myService, IOptions<MySettings> settings)
+        private readonly MySqlModule _testDb;
+        public RoomController(/*MyService myService, */IOptions<MySqlSettings> settings)
         {
+            string connectString = settings.Value.ConnectString ?? throw new Exception("settings.Value.MySqlSetting");
+            _testDb = new MySqlModule(connectString);
         }
 
         // 컨트롤러 액션 메서드 작성
@@ -113,17 +117,17 @@ namespace WebServer
 
     public partial class RoomController : ControllerBase
     {
-        public class Args
+        public class GetArgs
         {
             public int P1 { get; set; }
             public int P2 { get; set; }
         }
 
         [HttpGet("get_{id}")]
-        public async Task<IActionResult> CreateGameSession([FromRoute] string id, [FromQuery] Args args)
+        public async Task<IActionResult> CreateGameSession([FromRoute] string id, [FromQuery] GetArgs args)
         {
-            var dba = new MySqlModule("Server=localhost;Database=mysql;User=root;Password=1234;Pooling=true;Min Pool Size=5;Max Pool Size=100;");
-            await dba.Query<string>("show tables;");
+            //var dba = new MySqlModule(_connectString);
+            await _testDb.QueryMultiAsync<string>("show tables;");
             //http://localhost:5000/room/get_{id}?P1=1&P2=4
             return StatusCode(200, new { error = "Internal server error" });
         }

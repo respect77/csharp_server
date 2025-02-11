@@ -44,7 +44,7 @@ namespace TcpServer.Context
                     read_byte_count = 0;
                     while (read_byte_count < header.Length)
                     {
-                        int byteCount = await _stream.ReadAsync(header, read_byte_count, header.Length - read_byte_count, _cts.Token);
+                        int byteCount = await _stream.ReadAsync(header.AsMemory(read_byte_count, header.Length - read_byte_count), _cts.Token).ConfigureAwait(false);
                         if (byteCount <= 0)
                         {
                             throw new IOException("end of stream");
@@ -65,7 +65,7 @@ namespace TcpServer.Context
 
                     while (read_byte_count < packet_size)
                     {
-                        int byteCount = await _stream.ReadAsync(header, read_byte_count, packet_size - read_byte_count, _cts.Token);
+                        int byteCount = await _stream.ReadAsync(packet_buffer.AsMemory(read_byte_count, packet_size - read_byte_count), _cts.Token).ConfigureAwait(false);
                         if (byteCount <= 0)
                         {
                             throw new IOException("end of stream");
@@ -73,7 +73,8 @@ namespace TcpServer.Context
                         read_byte_count += byteCount;
                     }
 
-                    var basePacket = MemoryPackSerializer.Deserialize<BasePacket>(packet_buffer);
+                    using var packet_buffer_stream = new MemoryStream(packet_buffer);
+                    var basePacket = await MemoryPackSerializer.DeserializeAsync<BasePacket>(packet_buffer_stream, null, _cts.Token).ConfigureAwait(false);
                     if (basePacket == null)
                     {
                         ArrayPool<byte>.Shared.Return(packet_buffer);
@@ -97,9 +98,9 @@ namespace TcpServer.Context
         {
             try
             {
-                await foreach (var packet in _sendChannel.Reader.ReadAllAsync(_cts.Token))
+                await foreach (var packet in _sendChannel.Reader.ReadAllAsync(_cts.Token).ConfigureAwait(false))
                 {
-                    await _stream.WriteAsync(packet, _cts.Token);
+                    await _stream.WriteAsync(packet, _cts.Token).ConfigureAwait(false);
                     //await _stream.FlushAsync(_cts.Token);
                 }
             }

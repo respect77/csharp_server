@@ -17,17 +17,17 @@ namespace Common
 
     public class MySqlModule
     {
-        private readonly string ConnectionString;
+        private readonly string _connectionString;
         public MySqlModule(string connectString)
         {
-            ConnectionString = connectString;
+            _connectionString = connectString;
         }
 
-        public async Task<T?> QuerySingle<T>(string query)
+        public async Task<T?> QuerySingleAsync<T>(string query)
         {
             try
             {
-                using var connection = new MySqlConnection(ConnectionString);
+                using var connection = new MySqlConnection(_connectionString);
                 await connection.OpenAsync().ConfigureAwait(false);
                 var result = await connection.QueryFirstAsync<T>(query).ConfigureAwait(false);
                 return result;
@@ -39,11 +39,11 @@ namespace Common
             }
         }
 
-        public async Task<IEnumerable<T>?> QueryMulti<T>(string query)
+        public async Task<IEnumerable<T>?> QueryMultiAsync<T>(string query)
         {
             try
             {
-                using var connection = new MySqlConnection(ConnectionString);
+                using var connection = new MySqlConnection(_connectionString);
                 await connection.OpenAsync().ConfigureAwait(false);
                 var result = await connection.QueryAsync<T>(query).ConfigureAwait(false);
                 return result;
@@ -54,8 +54,8 @@ namespace Common
                 return null;
             }
         }
-
-        public async Task QueryMulti2<T>(string query)
+        /*
+        public async Task QueryMultiAsync2<T>(string query)
         {
             try
             {
@@ -76,12 +76,13 @@ namespace Common
                 return;
             }
         }
+        */
 
-        public async Task<bool> Exec(string query)
+        public async Task<bool> ExecAsync(string query)
         {
             try
             {
-                using var connection = new MySqlConnection(ConnectionString);
+                using var connection = new MySqlConnection(_connectionString);
                 await connection.OpenAsync().ConfigureAwait(false);
                 int rows = await connection.ExecuteAsync(query).ConfigureAwait(false);
                 return true;
@@ -93,13 +94,13 @@ namespace Common
             }
         }
 
-        public async Task<bool> Transaction(List<string> queries)
+        public async Task<bool> TransactionAsync(List<string> queries)
         {
             try
             {
-                using var connection = new MySqlConnection(ConnectionString);
+                using var connection = new MySqlConnection(_connectionString);
                 await connection.OpenAsync().ConfigureAwait(false);
-                using var transaction = connection.BeginTransaction();
+                using var transaction = await connection.BeginTransactionAsync().ConfigureAwait(false);
                 try
                 {
                     foreach (var query in queries)
