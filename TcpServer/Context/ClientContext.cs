@@ -68,7 +68,8 @@ namespace TcpServer.Context
                         int byteCount = await _stream.ReadAsync(packet_buffer.AsMemory(read_byte_count, packet_size - read_byte_count), _cts.Token).ConfigureAwait(false);
                         if (byteCount <= 0)
                         {
-                            throw new IOException("end of stream");
+                            ArrayPool<byte>.Shared.Return(packet_buffer);
+                            throw new IOException("byteCount <= 0");
                         }
                         read_byte_count += byteCount;
                     }
@@ -78,10 +79,40 @@ namespace TcpServer.Context
                     if (basePacket == null)
                     {
                         ArrayPool<byte>.Shared.Return(packet_buffer);
-                        continue;
+                        throw new IOException("basePacket == null");
                     }
                     _serverContext.RecvPacket(this, basePacket.Type, basePacket);
                     ArrayPool<byte>.Shared.Return(packet_buffer);
+
+                    /*
+                    using var memoryOwner = MemoryPool<byte>.Shared.Rent(packet_size);
+                    Memory<byte> packet_buffer = memoryOwner.Memory;
+
+                    while (read_byte_count < packet_size)
+                    {
+                        int byteCount = await _stream.ReadAsync(packet_buffer.Slice(read_byte_count, packet_size - read_byte_count), _cts.Token).ConfigureAwait(false);
+                        if (byteCount <= 0)
+                        {
+                            throw new IOException("byteCount <= 0");
+                        }
+                        read_byte_count += byteCount;
+                    }
+
+                    if (MemoryMarshal.TryGetArray(packet_buffer, out ArraySegment<byte> segment))
+                    {
+                        //using var stream = new MemoryStream(segment.Array!, segment.Offset, segment.Count, writable: false);
+                        using var packet_buffer_stream = new MemoryStream(segment.Array!);
+                        var basePacket = await MemoryPackSerializer.DeserializeAsync<BasePacket>(packet_buffer_stream, null, _cts.Token).ConfigureAwait(false);
+                        if (basePacket == null)
+                        {
+                            throw new IOException("basePacket == null");
+                        }
+                        _serverContext.RecvPacket(this, basePacket.Type, basePacket);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("MemoryMarshal.TryGetArray(packet_buffer, out ArraySegment<byte> segment)");
+                    }*/
                 }
             }
             catch (OperationCanceledException)
