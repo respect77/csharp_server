@@ -6,11 +6,11 @@ WORKDIR /app
 # 2️⃣ 프로젝트 파일을 먼저 복사하고 복원 (캐시 최적화)
 COPY *.sln ./
 COPY Common/*.csproj ./Common/
-COPY TcpServer/*.csproj ./TcpServer/
+COPY WebServer/*.csproj ./WebServer/
 
 
 # 3️⃣ 전체 소스 코드 복사
 COPY . ./
 
 # 4️⃣ 프로젝트 경로를 지정하여 빌드 (수정)
-RUN dotnet publish TcpServer/TcpServer.csproj -c release -o /out
+RUN dotnet publish WebServer/WebServer.csproj -c release -o /out
